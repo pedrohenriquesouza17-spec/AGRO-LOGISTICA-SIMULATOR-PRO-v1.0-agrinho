@@ -1,0 +1,846 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Agro Logística Simulator Pro - Pecuária & Perigo</title>
+    <style>
+        :root {
+            --fs-blue: #0078d4;
+            --fs-ui-bg: rgba(12, 16, 24, 0.96);
+            --neon-amber: #ffb300;
+            --neon-green: #00e676;
+            --neon-blue: #00b0ff;
+            --neon-red: #ff1744;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: #05070a;
+            font-family: 'Segoe UI', Arial, sans-serif;
+            overflow: hidden;
+            color: #fff;
+            user-select: none;
+        }
+
+        /* MENU INICIAL */
+        #start-screen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: linear-gradient(135deg, #0d1a10 0%, #030703 100%);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 100;
+            text-align: center;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+
+        #start-screen h1 {
+            font-size: 36px;
+            color: var(--neon-green);
+            margin-bottom: 10px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+
+        .objective-box {
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 8px;
+            padding: 15px;
+            max-width: 800px;
+            margin-bottom: 20px;
+            font-size: 13px;
+            color: #ddd;
+            line-height: 1.4;
+        }
+
+        .objective-box h2 {
+            color: var(--neon-amber);
+            font-size: 15px;
+            margin-top: 0;
+        }
+
+        .stage-route {
+            text-align: left;
+            margin: 10px 0;
+            padding-left: 15px;
+            list-style: none;
+        }
+
+        .stage-route li {
+            margin-bottom: 5px;
+        }
+
+        .controls-preview {
+            margin-top: 15px;
+            border-top: 1px solid rgba(255,255,255,0.1);
+            padding-top: 10px;
+            text-align: left;
+        }
+
+        .grid-controls {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 6px 20px;
+        }
+
+        .key-bind {
+            background: #333;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: monospace;
+            color: var(--neon-amber);
+        }
+
+        .start-btn {
+            background: var(--neon-green);
+            color: #000;
+            border: none;
+            padding: 12px 35px;
+            font-size: 16px;
+            font-weight: bold;
+            border-radius: 30px;
+            cursor: pointer;
+            box-shadow: 0 5px 20px rgba(0, 230, 118, 0.4);
+        }
+
+        #game-wrapper {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+            display: none;
+        }
+
+        canvas { display: block; }
+
+        /* HUD Superior */
+        #fs-hud-top {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            right: 20px;
+            display: flex;
+            justify-content: space-between;
+            pointer-events: none;
+            z-index: 5;
+        }
+
+        .hud-block {
+            background: var(--fs-ui-bg);
+            padding: 10px 15px;
+            border-radius: 6px;
+            border-bottom: 3px solid var(--fs-blue);
+            display: flex;
+            gap: 15px;
+            pointer-events: auto;
+        }
+
+        .hud-item { text-align: left; }
+        .hud-label { font-size: 9px; color: #aaa; text-transform: uppercase; font-weight: bold; }
+        .hud-value { font-size: 15px; font-weight: bold; color: #fff; }
+
+        #mission-panel {
+            background: rgba(12, 20, 32, 0.95);
+            border-top: 3px solid var(--neon-amber);
+            padding: 10px 20px;
+            border-radius: 6px;
+            text-align: center;
+        }
+        
+        /* ALERTA DE SUBMERSÃO (CRONÔMETRO DO LAGO) */
+        #lake-warning {
+            position: absolute;
+            top: 120px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(211, 47, 47, 0.95);
+            color: white;
+            padding: 15px 40px;
+            border-radius: 8px;
+            font-weight: bold;
+            font-size: 22px;
+            text-align: center;
+            border: 2px solid #ff1744;
+            box-shadow: 0 0 30px rgba(255, 23, 68, 0.6);
+            display: none;
+            z-index: 20;
+            animation: pulse 1s infinite alternate;
+        }
+
+        @keyframes pulse {
+            from { transform: translateX(-50%) scale(1); }
+            to { transform: translateX(-50%) scale(1.05); }
+        }
+
+        #sales-toast {
+            position: absolute;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 230, 118, 0.95);
+            color: #000;
+            padding: 12px 25px;
+            border-radius: 30px;
+            font-weight: bold;
+            font-size: 15px;
+            display: none;
+            z-index: 10;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="start-screen">
+        <h1>AGRO LOGÍSTICA SIMULATOR PRO v2.5</h1>
+        <div class="objective-box">
+            <h2>Mecânicas Avançadas de Manejo e Perigos Reais</h2>
+            <p>Monitore o ganho de peso dos animais nos piquetes para faturar alto e proteja seus veículos da água profunda!</p>
+            <ul class="stage-route">
+                <li>🐄 <strong>Piquetes Individuais:</strong> Vacas, Porcos, Galinhas e Cavalos agora vivem em pastos separados.</li>
+                <li>⚖️ <strong>Engorda Dinâmica:</strong> Animais jovens/magros rendem pouco lucro. Deixe-os pastar para engordar até 100%!</li>
+                <li>⚠️ <strong>Alerta de Afogamento:</strong> O motor do veículo sofrerá calço hidráulico se passar mais de 12 segundos dentro do lago!</li>
+            </ul>
+
+            <div class="controls-preview">
+                <div class="grid-controls">
+                    <div class="help-line"><span>Mover Veículo Ativo</span> <span class="key-bind">W A S D / Setas</span></div>
+                    <div class="help-line"><span>Trator / Implemento</span> <span class="key-bind">U / G</span></div>
+                    <div class="help-line"><span>Colheitadeira Axial</span> <span class="key-bind">H</span></div>
+                    <div class="help-line"><span>Camião Caçambeiro</span> <span class="key-bind">K</span></div>
+                    <div class="help-line"><span>Camião Boiadeiro Pesado</span> <span class="key-bind">J</span></div>
+                    <div class="help-line"><span>Descarregar / Vender Gado</span> <span class="key-bind">Tecla V (No Frigorífico)</span></div>
+                </div>
+            </div>
+        </div>
+        <button class="start-btn" onclick="startGame()">Iniciar Simulador</button>
+    </div>
+
+    <div id="game-wrapper">
+        <div id="lake-warning">⚠️ INCÊNDIO / AFOGAMENTO DO MOTOR!<br><span id="lake-timer">12.0</span>s PARA SAIR DA ÁGUA!</div>
+        <canvas id="fsCanvas"></canvas>
+
+        <div id="fs-hud-top">
+            <div class="hud-block">
+                <div class="hud-item">
+                    <div class="hud-label">Veículo Ativo</div>
+                    <div id="vehicle-txt" class="hud-value" style="color: var(--neon-green);">🚜 TRATOR JD 7R</div>
+                </div>
+                <div class="hud-item">
+                    <div class="hud-label">Mecânica / Carga</div>
+                    <div id="implement-txt" class="hud-value">Grade Aradora</div>
+                </div>
+            </div>
+
+            <div id="mission-panel">
+                <div class="hud-label" style="color: var(--neon-amber);">🎯 Status do Trabalho de Campo</div>
+                <div id="mission-txt" class="hud-value" style="color: #fff; font-size: 14px;">Solo Arado: 0 blocos | Semeado: 0 blocos</div>
+            </div>
+
+            <div class="hud-block">
+                <div class="hud-item">
+                    <div class="hud-label">Gaiola Boiadeira</div>
+                    <div id="truck-cargo-txt" class="hud-value" style="color: #4fc3f7;">Carga: 0/6 Animais</div>
+                </div>
+                <div class="hud-item">
+                    <div class="hud-label">Saldo Financeiro</div>
+                    <div id="money-txt" class="hud-value" style="color: #ffd54f;">R$ 10.000</div>
+                </div>
+            </div>
+        </div>
+
+        <div id="sales-toast">Objetivo Concluído!</div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('fsCanvas');
+        const ctx = canvas.getContext('2d');
+        let gameRunning = false;
+        let animationTick = 0;
+
+        function resize() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        }
+        window.addEventListener('resize', resize);
+        resize();
+
+        function startGame() {
+            document.getElementById('start-screen').style.display = 'none';
+            document.getElementById('game-wrapper').style.display = 'block';
+            resize();
+            gameRunning = true;
+        }
+
+        let preparedTilesCount = 0;
+        let plantedTilesCount = 0;
+
+        function updatePanelDisplay() {
+            let txt = document.getElementById('mission-txt');
+            if (!txt) return;
+            txt.innerText = "Solo Arado: " + preparedTilesCount + " | Semeado: " + plantedTilesCount;
+        }
+
+        const MAP_W = 4800;
+        const MAP_H = 4800;
+        const TILE_SIZE = 100;
+        const ROWS = 48;
+        const COLS = 48;
+
+        let farmGrid = [];
+        let cropGrid = []; 
+        let cropTimerGrid = [];
+
+        for (let r = 0; r < ROWS; r++) {
+            farmGrid[r] = [];
+            cropGrid[r] = [];
+            cropTimerGrid[r] = [];
+            for (let c = 0; c < COLS; c++) {
+                farmGrid[r][c] = 0;
+                cropGrid[r][c] = 0;
+                cropTimerGrid[r][c] = 0;
+            }
+        }
+
+        // --- LAGO MELHORADO E VEÍCULOS ---
+        let dam = { x: 3500, y: 800, r: 280 }; 
+        let lakeTimeLeft = 12.0; 
+        let isInsideLake = false;
+
+        let sellZone = { x: 2300, y: 3900, w: 450, h: 240 };
+        let siloCommercial = { x: 1800, y: 600, r: 65 };
+        let siloFactory = { x: 2300, y: 600, r: 65 };
+
+        // Piquetes / Cercados Individuais Definidos por Retângulos
+        let enclosures = {
+            cow:   { x1: 200,  y1: 1200, x2: 900,  y2: 2200, label: "PASTO DAS VACAS" },
+            pig:   { x1: 1000, y1: 1200, x2: 1700, y2: 2200, label: "PIQUETE DOS PORCOS" },
+            hen:   { x1: 200,  y1: 2400, x2: 900,  y2: 3400, label: "GALINHEIRO LIVRE" },
+            horse: { x1: 1000, y1: 2400, x2: 1700, y2: 3400, label: "COCHEIRAS / HARAS" }
+        };
+
+        let trees = [];
+        let fishes = [];
+
+        function initScenario() {
+            for(let c = 0; c < COLS; c++) farmGrid[9][c] = 1;
+            for(let r = 9; r < 42; r++) farmGrid[r][20] = 1;
+            
+            for (let i = 0; i < 50; i++) {
+                let tx = Math.random() * (MAP_W - 200) + 100;
+                let ty = Math.random() * (MAP_H - 200) + 100;
+                if (Math.hypot(tx - dam.x, ty - dam.y) > dam.r + 50 && ty > 600) {
+                    trees.push({ x: tx, y: ty, size: Math.random() * 10 + 15 });
+                }
+            }
+            for (let i = 0; i < 20; i++) {
+                let angle = Math.random() * Math.PI * 2;
+                let radius = Math.random() * (dam.r - 40);
+                fishes.push({ x: dam.x + Math.cos(angle) * radius, y: dam.y + Math.sin(angle) * radius, speed: 0.8, angle: Math.random() * Math.PI * 2, turnTimer: 40 });
+            }
+        }
+        initScenario();
+
+        let wallet = 10000;
+        let activeVehicle = "tractor"; 
+
+        let tractor = { x: 1950, y: 1100, w: 90, h: 54, speed: 0, maxSpeed: 6.5, accel: 0.18, decel: 0.12, angle: 0, steerSpeed: 0.042, currentImplement: "grade" };
+        let harvester = { x: 2100, y: 1100, w: 110, h: 64, speed: 0, maxSpeed: 4.8, accel: 0.12, decel: 0.10, angle: 0, steerSpeed: 0.035, tankCapacity: 0 };
+        let tipperTruck = { x: 2250, y: 1100, w: 125, h: 56, speed: 0, maxSpeed: 8.5, accel: 0.22, decel: 0.12, angle: 0, steerSpeed: 0.038, grainLoad: 0, maxCapacity: 100 };
+        
+        // Camião Boiadeiro Adaptado para carregar múltiplos tipos com dados de engorda individual
+        let cattleTruck = { 
+            x: 2400, y: 1100, w: 135, h: 58, speed: 0, maxSpeed: 8.0, accel: 0.20, decel: 0.14, angle: 0, steerSpeed: 0.038, 
+            loadedAnimals: [], // Guardará objetos {type: '', weight: X}
+            maxCapacity: 6 
+        };
+
+        let animals = [];
+        function spawnAnimals() {
+            animals = [];
+            // Criação inicial das 4 espécies dentro de seus respectivos limites
+            for(let i=0; i<6; i++) createAnimal('cow', enclosures.cow);
+            for(let i=0; i<6; i++) createAnimal('pig', enclosures.pig);
+            for(let i=0; i<8; i++) createAnimal('hen', enclosures.hen);
+            for(let i=0; i<5; i++) createAnimal('horse', enclosures.horse);
+        }
+        
+        function createAnimal(type, enc) {
+            let spots = [];
+            if(type === 'cow') {
+                for(let s=0; s<4; s++) spots.push({ rx: (Math.random()-0.5)*18, ry: (Math.random()-0.5)*10, r: Math.random()*4 + 3 });
+            }
+            animals.push({
+                x: enc.x1 + 50 + Math.random() * (enc.x2 - enc.x1 - 100),
+                y: enc.y1 + 50 + Math.random() * (enc.y2 - enc.y1 - 100),
+                type: type,
+                enc: enc,
+                speed: type === 'hen' ? 0.6 : type === 'horse' ? 0.7 : 0.4,
+                angle: Math.random() * Math.PI * 2,
+                limbCycle: Math.random() * 10,
+                spots: spots,
+                weight: 20 + Math.random() * 20 // Começam magros (20% a 40% de gordura/peso)
+            });
+        }
+        spawnAnimals();
+
+        let keys = {};
+        window.addEventListener('keydown', e => {
+            if(!gameRunning) return;
+            keys[e.key.toLowerCase()] = true;
+            
+            if(e.key.toLowerCase() === 'u') { activeVehicle = "tractor"; updateHUDLabels(); }
+            if(e.key.toLowerCase() === 'h') { activeVehicle = "harvester"; updateHUDLabels(); }
+            if(e.key.toLowerCase() === 'k') { activeVehicle = "tipper"; updateHUDLabels(); }
+            if(e.key.toLowerCase() === 'j') { activeVehicle = "cattle"; updateHUDLabels(); }
+            
+            if(e.key.toLowerCase() === 'g' && activeVehicle === "tractor") {
+                tractor.currentImplement = tractor.currentImplement === "grade" ? "plantadeira" : "grade";
+                updateHUDLabels();
+            }
+            if(e.key.toLowerCase() === 'v') trySellCattle();
+        });
+        window.addEventListener('keyup', e => keys[e.key.toLowerCase()] = false);
+
+        function updateHUDLabels() {
+            let vTxt = document.getElementById('vehicle-txt');
+            let iTxt = document.getElementById('implement-txt');
+            if(!vTxt || !iTxt) return;
+
+            if (activeVehicle === "tractor") {
+                vTxt.innerText = "🚜 TRATOR JD 7R"; vTxt.style.color = "var(--neon-green)";
+                iTxt.innerText = tractor.currentImplement === "grade" ? "Grade Aradora Ativa" : "Plantadeira Pro Ativa";
+            } else if (activeVehicle === "harvester") {
+                vTxt.innerText = "🌾 COLHEITADEIRA CASE AXIAL"; vTxt.style.color = "var(--neon-amber)";
+                iTxt.innerText = "Depósito: " + harvester.tankCapacity + "%";
+            } else if (activeVehicle === "tipper") {
+                vTxt.innerText = "🚛 CAMIÃO CAÇAMBEIRO"; vTxt.style.color = "var(--neon-blue)";
+                iTxt.innerText = "Carga de Milho: " + tipperTruck.grainLoad + "%";
+            } else if (activeVehicle === "cattle") {
+                vTxt.innerText = "🚛 CAMIÃO BOIADEIRO"; vTxt.style.color = "#4fc3f7";
+                iTxt.innerText = "Gaiola Boiadeira (" + cattleTruck.loadedAnimals.length + "/" + cattleTruck.maxCapacity + ")";
+            }
+            document.getElementById('truck-cargo-txt').innerText = "Carga: " + cattleTruck.loadedAnimals.length + "/" + cattleTruck.maxCapacity + " Animais";
+            updatePanelDisplay();
+        }
+
+        function getActiveObject() {
+            if (activeVehicle === "tractor") return tractor;
+            if (activeVehicle === "harvester") return harvester;
+            if (activeVehicle === "tipper") return tipperTruck;
+            return cattleTruck;
+        }
+
+        function processVehiclePhysics() {
+            let v = getActiveObject();
+            if (keys['w'] || keys['arrowup']) v.speed = Math.min(v.speed + v.accel, v.maxSpeed);
+            else if (keys['s'] || keys['arrowdown']) v.speed = Math.max(v.speed - v.accel, -v.maxSpeed * 0.4);
+            else {
+                if (v.speed > 0) v.speed = Math.max(0, v.speed - v.decel);
+                if (v.speed < 0) v.speed = Math.min(0, v.speed + v.decel);
+            }
+            if (Math.abs(v.speed) > 0.1) {
+                const dir = v.speed > 0 ? 1 : -1;
+                if (keys['a'] || keys['arrowleft']) v.angle -= v.steerSpeed * dir;
+                if (keys['d'] || keys['arrowright']) v.angle += v.steerSpeed * dir;
+            }
+            v.x += Math.cos(v.angle) * v.speed; v.y += Math.sin(v.angle) * v.speed;
+            v.x = Math.max(60, Math.min(MAP_W - 60, v.x)); v.y = Math.max(60, Math.min(MAP_H - 60, v.y));
+            checkCollisionsAndOperations();
+        }
+
+        function checkCollisionsAndOperations() {
+            let activeObj = getActiveObject();
+            let col = Math.floor(activeObj.x / TILE_SIZE);
+            let row = Math.floor(activeObj.y / TILE_SIZE);
+            if (row < 0 || row >= ROWS || col < 0 || col >= COLS) return;
+
+            // --- TESTE DE ENTRADA NO LAGO ---
+            let distToLake = Math.hypot(activeObj.x - dam.x, activeObj.y - dam.y);
+            if (distToLake < dam.r) {
+                isInsideLake = true;
+            } else {
+                isInsideLake = false;
+            }
+
+            if (activeVehicle === "tractor" && Math.abs(tractor.speed) > 0.5) {
+                if (tractor.currentImplement === "grade" && farmGrid[row][col] === 0) {
+                    farmGrid[row][col] = 6; preparedTilesCount++; updatePanelDisplay();
+                }
+                if (tractor.currentImplement === "plantadeira" && farmGrid[row][col] === 6) {
+                    farmGrid[row][col] = 7; cropGrid[row][col] = 1; plantedTilesCount++; updatePanelDisplay();
+                }
+            }
+
+            if (activeVehicle === "harvester" && farmGrid[row][col] === 7 && cropGrid[row][col] === 3) {
+                if (Math.abs(harvester.speed) > 0.5) {
+                    farmGrid[row][col] = 0; cropGrid[row][col] = 0; 
+                    harvester.tankCapacity = Math.min(100, harvester.tankCapacity + 8); updateHUDLabels();
+                }
+            }
+
+            // Embarque de Animais na Gaiola com Coleta de Dados de Peso
+            if (activeVehicle === "cattle" && cattleTruck.loadedAnimals.length < cattleTruck.maxCapacity) {
+                for (let i = animals.length - 1; i >= 0; i--) {
+                    let animal = animals[i];
+                    if (Math.hypot(cattleTruck.x - animal.x, cattleTruck.y - animal.y) < 130) {
+                        cattleTruck.loadedAnimals.push({
+                            type: animal.type,
+                            weight: animal.weight
+                        });
+                        animals.splice(i, 1);
+                        showToast("Embarcado: " + animal.type.toUpperCase() + " (Engorda: " + Math.floor(animal.weight) + "%)");
+                        updateHUDLabels();
+                    }
+                }
+            }
+        }
+
+        function trySellCattle() {
+            if (activeVehicle === "cattle" && cattleTruck.loadedAnimals.length > 0) {
+                if (cattleTruck.x >= sellZone.x && cattleTruck.x <= sellZone.x + sellZone.w &&
+                    cattleTruck.y >= sellZone.y && cattleTruck.y <= sellZone.y + sellZone.h) {
+                    
+                    let totalPayout = 0;
+                    let reportText = "";
+
+                    cattleTruck.loadedAnimals.forEach(anim => {
+                        let basePrice = 0;
+                        if (anim.type === 'cow') basePrice = 2500;
+                        else if (anim.type === 'pig') basePrice = 1200;
+                        else if (anim.type === 'hen') basePrice = 150;
+                        else if (anim.type === 'horse') basePrice = 4000;
+
+                        // O preço final é multiplicado pela porcentagem de peso/engorda (ex: 40% engorda = 40% do valor total)
+                        let finalPrice = basePrice * (anim.weight / 100);
+                        totalPayout += finalPrice;
+                    });
+
+                    totalPayout = Math.floor(totalPayout);
+                    wallet += totalPayout;
+                    showToast("Venda Concluída! Faturamento: +R$ " + totalPayout.toLocaleString('pt-BR') + " (Preço baseado na engorda)");
+                    
+                    cattleTruck.loadedAnimals = [];
+                    updateHUD(); updateHUDLabels(); spawnAnimals();
+                } else {
+                    showToast("🚨 Pare o camião dentro da área amarela do Frigorífico!");
+                }
+            }
+        }
+
+        function updateHUD() {
+            let mTxt = document.getElementById('money-txt');
+            if (mTxt) mTxt.innerText = "R$ " + wallet.toLocaleString('pt-BR');
+        }
+
+        function showToast(text) {
+            let t = document.getElementById('sales-toast'); if(!t) return;
+            t.innerText = text; t.style.display = 'block'; 
+            setTimeout(() => t.style.display = 'none', 4000);
+        }
+
+        // --- ATUALIZAÇÕES DA SIMULAÇÃO ---
+        function updateSimulationValues() {
+            if(!gameRunning) return;
+            animationTick += 0.1;
+
+            // Gerenciador do Cronômetro do Lago (Calço Hidráulico)
+            let warningBox = document.getElementById('lake-warning');
+            let timerSpan = document.getElementById('lake-timer');
+            
+            if (isInsideLake) {
+                warningBox.style.display = 'block';
+                lakeTimeLeft -= 0.016; // Aproximadamente 60 fps
+                if (lakeTimeLeft < 0) lakeTimeLeft = 0;
+                timerSpan.innerText = lakeTimeLeft.toFixed(1);
+
+                if (lakeTimeLeft <= 0) {
+                    // O veículo quebrou! Penalidade severa
+                    let activeObj = getActiveObject();
+                    wallet = Math.max(0, wallet - 5000); // Custo do guincho
+                    showToast("💥 O Motor Fundiu na Água! Guincho cobrou R$ 5.000 de conserto.");
+                    // Resgata o veículo de volta ao pátio seguro
+                    activeObj.x = 1950; activeObj.y = 1100; activeObj.speed = 0;
+                    lakeTimeLeft = 12.0; warningBox.style.display = 'none'; isInsideLake = false;
+                    updateHUD();
+                }
+            } else {
+                warningBox.style.display = 'none';
+                lakeTimeLeft = 12.0; // Reseta o fôlego saindo do lago
+            }
+
+            // Movimentação e Engorda dos Animais presa em seus respectivos cercados
+            animals.forEach(a => {
+                a.limbCycle += 0.15;
+                
+                // Sistema Dinâmico de Engorda: Conforme andam, ganham peso até o teto de 100%
+                if (a.weight < 100) {
+                    a.weight += 0.015; 
+                }
+
+                if(Math.random() < 0.02) {
+                    a.angle += (Math.random() - 0.5) * 1.8;
+                }
+                a.x += Math.cos(a.angle) * a.speed;
+                a.y += Math.sin(a.angle) * a.speed;
+
+                // Colisão Física Restrita ao próprio Piquete
+                if (a.x < a.enc.x1 + 15) { a.x = a.enc.x1 + 15; a.angle += Math.PI; }
+                if (a.x > a.enc.x2 - 15) { a.x = a.enc.x2 - 15; a.angle += Math.PI; }
+                if (a.y < a.enc.y1 + 15) { a.y = a.enc.y1 + 15; a.angle += Math.PI; }
+                if (a.y > a.enc.y2 - 15) { a.y = a.enc.y2 - 15; a.angle += Math.PI; }
+            });
+
+            fishes.forEach(fish => {
+                fish.turnTimer--;
+                if (fish.turnTimer <= 0) { fish.angle += (Math.random() - 0.5) * 1.5; fish.turnTimer = 50; }
+                let nx = fish.x + Math.cos(fish.angle) * fish.speed;
+                let ny = fish.y + Math.sin(fish.angle) * fish.speed;
+                if (Math.hypot(nx - dam.x, ny - dam.y) < dam.r - 20) { fish.x = nx; fish.y = ny; } else { fish.angle += Math.PI; }
+            });
+
+            for(let r = 0; r < ROWS; r++) {
+                for(let c = 0; c < COLS; c++) {
+                    if (farmGrid[r][c] === 7 && cropGrid[r][c] < 3) {
+                        cropTimerGrid[r][c]++;
+                        if (cropTimerGrid[r][c] > 250) { cropGrid[r][c]++; cropTimerGrid[r][c] = 0; }
+                    }
+                }
+            }
+        }
+
+        function render() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            let activeObj = getActiveObject();
+            let camX = canvas.width / 2 - activeObj.x;
+            let camY = canvas.height / 2 - activeObj.y;
+
+            ctx.save(); ctx.translate(camX, camY);
+
+            // Renderizar Terreno
+            for (let r = 0; r < ROWS; r++) {
+                for (let c = 0; c < COLS; c++) {
+                    let x = c * TILE_SIZE; let y = r * TILE_SIZE;
+                    if (x < activeObj.x - canvas.width && x > activeObj.x + canvas.width) continue;
+                    
+                    switch (farmGrid[r][c]) {
+                        case 0: ctx.fillStyle = "#2e5c30"; break; 
+                        case 1: ctx.fillStyle = "#42322f"; break; 
+                        case 6: ctx.fillStyle = "#4e3629"; break; 
+                        case 7: ctx.fillStyle = "#3a251a"; break; 
+                    }
+                    ctx.fillRect(x, y, TILE_SIZE, TILE_SIZE);
+
+                    if (farmGrid[r][c] === 7) {
+                        let stage = cropGrid[r][c];
+                        ctx.fillStyle = stage === 1 ? "#66bb6a" : stage === 2 ? "#388e3c" : "#fbc02d";
+                        for (let i = 15; i < TILE_SIZE; i += 25) ctx.fillRect(x + i, y + 15, 6, TILE_SIZE - 30);
+                    }
+                }
+            }
+
+            // --- DESIGN DOS 4 CERCADOS INDIVIDUAIS ---
+            ctx.lineWidth = 4;
+            for (let key in enclosures) {
+                let enc = enclosures[key];
+                // Desenhar grama interna texturizada de piquete
+                ctx.fillStyle = "rgba(46, 117, 50, 0.3)";
+                ctx.fillRect(enc.x1, enc.y1, enc.x2 - enc.x1, enc.y2 - enc.y1);
+                // Mourões e linhas de arame farpado
+                ctx.strokeStyle = "#5d4037";
+                ctx.strokeRect(enc.x1, enc.y1, enc.x2 - enc.x1, enc.y2 - enc.y1);
+                
+                // Etiquetas do Painel de Cada Pasto
+                ctx.fillStyle = "rgba(0,0,0,0.5)";
+                ctx.fillRect(enc.x1 + 10, enc.y1 + 10, 160, 22);
+                ctx.fillStyle = "#ffb300"; ctx.font = "bold 11px Arial";
+                ctx.fillText(enc.label, enc.x1 + 18, enc.y1 + 25);
+            }
+
+            // Silos Industriais
+            ctx.fillStyle = "#78909c"; ctx.beginPath(); ctx.arc(siloCommercial.x, siloCommercial.y, siloCommercial.r, 0, Math.PI*2); ctx.fill();
+            ctx.fillStyle = "#b0bec5"; ctx.beginPath(); ctx.arc(siloCommercial.x, siloCommercial.y, siloCommercial.r - 8, 0, Math.PI*2); ctx.fill();
+            ctx.fillStyle = "#263238"; ctx.font = "bold 11px Arial"; ctx.fillText("SILO GRÃOS", siloCommercial.x - 36, siloCommercial.y + 4);
+
+            ctx.fillStyle = "#5e35b1"; ctx.beginPath(); ctx.arc(siloFactory.x, siloFactory.y, siloFactory.r, 0, Math.PI*2); ctx.fill();
+            ctx.fillStyle = "#7e57c2"; ctx.beginPath(); ctx.arc(siloFactory.x, siloFactory.y, siloFactory.r - 8, 0, Math.PI*2); ctx.fill();
+            ctx.fillStyle = "#fff"; ctx.font = "bold 11px Arial"; ctx.fillText("FÁB_RAÇÃO", siloFactory.x - 32, siloFactory.y + 4);
+
+            // Frigorífico / Abatedouro Comercial
+            ctx.fillStyle = "#263238"; ctx.fillRect(sellZone.x, sellZone.y, sellZone.w, sellZone.h);
+            ctx.strokeStyle = "#ffb300"; ctx.lineWidth = 5; ctx.strokeRect(sellZone.x+10, sellZone.y+10, sellZone.w-20, sellZone.h-20);
+            ctx.fillStyle = "#fff"; ctx.font = "bold 12px Arial"; ctx.fillText("ZONA DE DESCARGA - INSDÚTRIA DE CARNES [V]", sellZone.x + 30, sellZone.y + 45);
+
+            // --- LAGO HD REFEITO (EFEITO REPRESA REALISTA COM DEGRADÊ) ---
+            let waveRadius = dam.r + Math.sin(animationTick * 0.4) * 5;
+            // Água rasa externa
+            ctx.fillStyle = "#0288d1"; ctx.beginPath(); ctx.arc(dam.x, dam.y, waveRadius, 0, Math.PI * 2); ctx.fill();
+            // Canal profundo central
+            ctx.fillStyle = "#01579b"; ctx.beginPath(); ctx.arc(dam.x, dam.y, waveRadius * 0.75, 0, Math.PI * 2); ctx.fill();
+            // Espuma na margem
+            ctx.strokeStyle = "rgba(255,255,255,0.25)"; ctx.lineWidth = 3; ctx.stroke();
+
+            // Peixes
+            fishes.forEach(f => {
+                ctx.save(); ctx.translate(f.x, f.y); ctx.rotate(f.angle);
+                ctx.fillStyle = "#ff7043"; ctx.beginPath(); ctx.ellipse(0, 0, 7, 3.5, 0, 0, Math.PI*2); ctx.fill();
+                ctx.restore();
+            });
+
+            // Árvores
+            trees.forEach(t => {
+                ctx.fillStyle = "#4e342e"; ctx.fillRect(t.x - 4, t.y, 8, t.size);
+                ctx.fillStyle = "#0e4611"; ctx.beginPath(); ctx.arc(t.x, t.y - 6, t.size, 0, Math.PI*2); ctx.fill();
+            });
+
+            // --- DESIGN AVANÇADO DOS ANIMAIS (COM BARRA DE ENGORDA) ---
+            animals.forEach(a => {
+                ctx.save(); ctx.translate(a.x, a.y); ctx.rotate(a.angle);
+                let swing = Math.sin(a.limbCycle) * 4;
+
+                // Barra indicadora de gordura/peso acima do lombo de cada animal
+                ctx.save(); ctx.rotate(-a.angle);
+                ctx.fillStyle = "rgba(0,0,0,0.5)"; ctx.fillRect(-15, -25, 30, 4);
+                ctx.fillStyle = a.weight > 80 ? "#00e676" : a.weight > 50 ? "#ffee58" : "#ff1744";
+                ctx.fillRect(-15, -25, 30 * (a.weight / 100), 4);
+                ctx.restore();
+
+                if (a.type === 'cow') {
+                    ctx.fillStyle = "#111"; ctx.fillRect(-12, -14 + swing, 5, 4); ctx.fillRect(8, -14 - swing, 5, 4);
+                    ctx.fillRect(-12, 10 - swing, 5, 4); ctx.fillRect(8, 10 + swing, 5, 4);
+                    ctx.fillStyle = "#F5F5F5"; ctx.beginPath(); ctx.ellipse(0, 0, 18, 12, 0, 0, Math.PI * 2); ctx.fill();
+                    ctx.fillStyle = "#111"; a.spots.forEach(s => { ctx.beginPath(); ctx.arc(s.rx, s.ry, s.r, 0, Math.PI*2); ctx.fill(); });
+                    ctx.fillStyle = "#F5F5F5"; ctx.beginPath(); ctx.arc(22, 0, 7, 0, Math.PI * 2); ctx.fill(); 
+                    ctx.fillStyle = "#FFA4A2"; ctx.beginPath(); ctx.ellipse(25, 0, 4, 3, 0, 0, Math.PI * 2); ctx.fill(); 
+                } else if (a.type === 'pig') {
+                    ctx.fillStyle = "#E08080"; ctx.fillRect(-8, -10 + swing, 4, 3); ctx.fillRect(6, -10 - swing, 4, 3);
+                    ctx.fillStyle = "#FFA4A2"; ctx.beginPath(); ctx.ellipse(0, 0, 14, 9, 0, 0, Math.PI * 2); ctx.fill();
+                    ctx.beginPath(); ctx.arc(16, 0, 5.5, 0, Math.PI * 2); ctx.fill();
+                    ctx.fillStyle = "#FF7070"; ctx.fillRect(19, -2, 3, 4);
+                } else if (a.type === 'hen') {
+                    // --- NOVA GALINHA HD ---
+                    ctx.fillStyle = "#ff9100"; ctx.fillRect(-4, -6 + swing, 2, 3); ctx.fillRect(2, -6 - swing, 2, 3); // Patas amarelas
+                    ctx.fillStyle = "#ffffff"; ctx.beginPath(); ctx.ellipse(0, 0, 8, 6, 0, 0, Math.PI*2); ctx.fill(); // Corpo penugem branca
+                    ctx.beginPath(); ctx.arc(7, -3, 4, 0, Math.PI*2); ctx.fill(); // Cabeça
+                    ctx.fillStyle = "#ff3d00"; ctx.fillRect(10, -4, 3, 2); // Bico laranja
+                    ctx.fillStyle = "#d50000"; ctx.fillRect(6, -8, 2, 2); // Crista vermelha
+                } else if (a.type === 'horse') {
+                    // --- NOVO CAVALO CRIOULO HD ---
+                    ctx.fillStyle = "#3e2723"; // Patas marrons escuras
+                    ctx.fillRect(-12, -13 + swing, 4, 5); ctx.fillRect(6, -13 - swing, 4, 5);
+                    ctx.fillRect(-12, 9 - swing, 4, 5); ctx.fillRect(6, 9 + swing, 4, 5);
+                    ctx.fillStyle = "#5d4037"; ctx.beginPath(); ctx.ellipse(0, 0, 20, 10, 0, 0, Math.PI*2); ctx.fill(); // Tronco forte marrom
+                    ctx.fillStyle = "#4e342e"; ctx.fillRect(12, -5, 12, 9); // Pescoço imponente em diagonal
+                    ctx.beginPath(); ctx.ellipse(22, -3, 7, 5, 0, 0, Math.PI*2); ctx.fill(); // Cabeça focinho
+                    ctx.fillStyle = "#212121"; ctx.fillRect(-22, -2, 5, 4); // Rabo/Crinina preta
+                }
+                ctx.restore();
+            });
+
+            // 1. TRATOR JD 7R + IMPLEMENTOS HD
+            ctx.save(); ctx.translate(tractor.x, tractor.y); ctx.rotate(tractor.angle);
+            ctx.globalAlpha = activeVehicle === "tractor" ? 1.0 : 0.45;
+            ctx.fillStyle = "#111";
+            ctx.fillRect(-28, -29, 22, 9); ctx.fillRect(-28, 20, 22, 9); 
+            ctx.fillRect(-28, -20, 22, 7); ctx.fillRect(-28, 13, 22, 7); 
+            ctx.fillRect(24, -18, 16, 5); ctx.fillRect(24, 13, 16, 5);
+            ctx.fillStyle = "#1b5e20"; ctx.fillRect(-20, -14, 64, 28); 
+            ctx.fillStyle = "#2e7d32"; ctx.fillRect(15, -11, 28, 22); 
+            ctx.fillStyle = "rgba(33, 150, 243, 0.6)"; ctx.fillRect(-8, -11, 22, 22);
+            ctx.strokeStyle = "#000"; ctx.lineWidth = 2; ctx.strokeRect(-8, -11, 22, 22);
+            
+            if (tractor.currentImplement === "grade") {
+                ctx.strokeStyle = "#555"; ctx.lineWidth = 5;
+                ctx.beginPath(); ctx.moveTo(-20, -6); ctx.lineTo(-45, -6); ctx.moveTo(-20, 6); ctx.lineTo(-45, 6); ctx.stroke(); 
+                ctx.fillStyle = "#7f0000"; ctx.fillRect(-48, -28, 6, 56); 
+                ctx.fillStyle = "#111"; 
+                for(let yPos = -24; yPos <= 24; yPos += 8) {
+                    ctx.fillRect(-52, yPos, 4, 3); ctx.fillRect(-42, yPos + 2, 4, 3); 
+                }
+                ctx.fillStyle = "#37474f"; ctx.fillRect(-47, -2, 5, 4); 
+                ctx.fillStyle = "#222"; ctx.fillRect(-49, -20, 2, 5); ctx.fillRect(-49, 15, 2, 5); 
+            } else {
+                ctx.strokeStyle = "#333"; ctx.lineWidth = 4;
+                ctx.beginPath(); ctx.moveTo(-20, 0); ctx.lineTo(-40, 0); ctx.stroke(); 
+                ctx.fillStyle = "#1b5e20"; ctx.fillRect(-43, -34, 5, 68); 
+                for(let yPos = -30; yPos <= 30; yPos += 12) {
+                    ctx.fillStyle = "#444"; ctx.fillRect(-49, yPos - 2, 6, 4); 
+                    ctx.fillStyle = "#ffeb3b"; ctx.fillRect(-54, yPos - 4, 5, 8); 
+                    ctx.fillStyle = "#111"; ctx.fillRect(-57, yPos - 1, 3, 2); 
+                }
+                ctx.fillStyle = "#78909c"; ctx.fillRect(-42, -26, 4, 4); ctx.fillRect(-42, 22, 4, 4); 
+            }
+            ctx.restore();
+
+            // 2. COLHEITADEIRA CASE AXIAL
+            ctx.save(); ctx.translate(harvester.x, harvester.y); ctx.rotate(harvester.angle);
+            ctx.globalAlpha = activeVehicle === "harvester" ? 1.0 : 0.45;
+            ctx.fillStyle = "#111";
+            ctx.fillRect(12, -31, 26, 9); ctx.fillRect(12, 22, 26, 9); 
+            ctx.fillRect(-36, -22, 16, 6); ctx.fillRect(-36, 16, 16, 6); 
+            ctx.fillStyle = "#b71c1c"; ctx.fillRect(-40, -23, 85, 46);
+            ctx.fillStyle = "#d32f2f"; ctx.fillRect(-10, -20, 50, 40);
+            ctx.fillStyle = "rgba(129, 212, 250, 0.7)"; ctx.fillRect(22, -16, 18, 32);
+            ctx.strokeStyle = "#b71c1c"; ctx.lineWidth = 5;
+            ctx.beginPath(); ctx.moveTo(-15, -20); ctx.lineTo(-55, -42); ctx.stroke();
+            ctx.fillStyle = "#c62828"; ctx.fillRect(55, -42, 12, 84); 
+            ctx.fillStyle = "#212121";
+            for(let o = -38; o <= 38; o += 12) {
+                ctx.beginPath(); ctx.moveTo(67, o); ctx.lineTo(76, o); ctx.lineTo(67, o+4); ctx.fill();
+            }
+            ctx.restore();
+
+            // 3. CAMIÃO CAÇAMBEIRO
+            ctx.save(); ctx.translate(tipperTruck.x, tipperTruck.y); ctx.rotate(tipperTruck.angle);
+            ctx.globalAlpha = activeVehicle === "tipper" ? 1.0 : 0.45;
+            ctx.fillStyle = "#111";
+            ctx.fillRect(36, -26, 18, 5); ctx.fillRect(36, 21, 18, 5); 
+            ctx.fillRect(-18, -27, 16, 6); ctx.fillRect(-18, 21, 16, 6); 
+            ctx.fillRect(-38, -27, 16, 6); ctx.fillRect(-38, 21, 16, 6); 
+            ctx.fillStyle = "#263238"; ctx.fillRect(-48, -16, 100, 32);
+            ctx.fillStyle = "#006064"; ctx.fillRect(24, -22, 28, 44); 
+            ctx.fillStyle = "#cfd8dc"; ctx.fillRect(-46, -24, 66, 48);
+            ctx.strokeStyle = "#90a4ae"; ctx.lineWidth = 2; ctx.strokeRect(-46, -24, 66, 48);
+            ctx.beginPath(); ctx.moveTo(-30, -24); ctx.lineTo(-30, 24); ctx.moveTo(-10, -24); ctx.lineTo(-10, 24); ctx.moveTo(10, -24); ctx.lineTo(10, 24); ctx.stroke();
+            if (tipperTruck.grainLoad > 0) { ctx.fillStyle = "#ffd54f"; ctx.fillRect(-42, -19, 58, 38); }
+            ctx.restore();
+
+            // 4. CAMIÃO BOIADEIRO MULTIESPÉCIES
+            ctx.save(); ctx.translate(cattleTruck.x, cattleTruck.y); ctx.rotate(cattleTruck.angle);
+            ctx.globalAlpha = activeVehicle === "cattle" ? 1.0 : 0.45;
+            ctx.fillStyle = "#111";
+            ctx.fillRect(42, -26, 18, 5); ctx.fillRect(42, 21, 18, 5);
+            ctx.fillRect(-12, -28, 18, 6); ctx.fillRect(-12, 22, 18, 6);
+            ctx.fillRect(-34, -28, 18, 6); ctx.fillRect(-34, 22, 18, 6);
+            ctx.fillStyle = "#b71c1c"; ctx.fillRect(25, -23, 32, 46); 
+            ctx.fillStyle = "#5d4037"; ctx.fillRect(-52, -26, 74, 52); // Gaiola Boiadeira de madeira estruturada
+            ctx.strokeStyle = "#d7ccc8"; ctx.lineWidth = 1.5;
+            for (let gx = -46; gx <= 16; gx += 10) { ctx.beginPath(); ctx.moveTo(gx, -26); ctx.lineTo(gx, 26); ctx.stroke(); }
+            for (let gy = -20; gy <= 20; gy += 10) { ctx.beginPath(); ctx.moveTo(-52, gy); ctx.lineTo(22, gy); ctx.stroke(); }
+            ctx.restore();
+
+            ctx.restore();
+        }
+
+        function gameLoop() {
+            processVehiclePhysics();
+            updateSimulationValues();
+            render();
+            requestAnimationFrame(gameLoop);
+        }
+
+        window.onload = () => {
+            updateHUD();
+            updateHUDLabels();
+            requestAnimationFrame(gameLoop);
+        };
+    </script>
+</body>
+</html>
