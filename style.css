@@ -1,7 +1,252 @@
-html, body {
-  margin: 0;
-  padding: 0;
+:root {
+    --fs-blue: #0078d4;
+    --fs-ui-bg: rgba(12, 16, 24, 0.96);
+    --neon-amber: #ffb300;
+    --neon-green: #00e676;
+    --neon-blue: #00b0ff;
+    --neon-red: #ff1744;
 }
-canvas {
-  display: block;
+
+body {
+    margin: 0;
+    padding: 0;
+    background-color: #05070a;
+    font-family: 'Segoe UI', Arial, sans-serif;
+    overflow: hidden;
+    color: #fff;
+    user-select: none;
+}
+
+/* MENU INICIAL */
+#start-screen {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: linear-gradient(135deg, #0d1a10 0%, #030703 100%);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    z-index: 100;
+    text-align: center;
+    padding: 20px;
+    box-sizing: border-box;
+}
+
+#start-screen h1 {
+    font-size: 36px;
+    color: var(--neon-green);
+    margin-bottom: 10px;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+}
+
+.objective-box {
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 8px;
+    padding: 15px;
+    margin-bottom: 5px;
+    font-size: 13px;
+    color: #ddd;
+    line-height: 1.4;
+    max-width: 650px;
+}
+
+.objective-box h2 {
+    color: #a5d6a7;
+    font-size: 16px;
+    margin-top: 0;
+    margin-bottom: 12px;
+}
+
+.stage-route {
+    text-align: left;
+    margin: 10px 0;
+    padding-left: 15px;
+    list-style: none;
+}
+
+.stage-route li {
+    margin-bottom: 5px;
+}
+
+.controls-preview {
+    margin-top: 15px;
+    border-top: 1px solid rgba(255,255,255,0.1);
+    padding-top: 10px;
+    text-align: left;
+    font-size: 13px;
+    line-height: 1.4;
+}
+
+.highlight-p {
+    background: rgba(255, 255, 255, 0.08);
+    padding: 5px 8px;
+    border-radius: 4px;
+    border-left: 4px solid #00e676;
+    margin-top: 0;
+}
+
+.warning-box-menu {
+    background: rgba(255,23,68,0.15);
+    border-left: 4px solid #ff1744;
+    padding: 6px;
+    margin-top: 15px;
+    border-radius: 4px;
+    font-size: 12px;
+}
+
+.grid-controls {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px 20px;
+}
+
+.key-bind {
+    background: #333;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-family: monospace;
+    color: var(--neon-amber);
+}
+
+.start-btn {
+    background: var(--neon-green);
+    color: #000;
+    border: none;
+    padding: 12px 35px;
+    font-size: 16px;
+    font-weight: bold;
+    border-radius: 30px;
+    cursor: pointer;
+    box-shadow: 0 5px 20px rgba(0, 230, 118, 0.4);
+}
+
+/* Animação de flutuação para o trator pixelizado */
+@keyframes floatTractor {
+    0% {
+        transform: translateY(0px) rotate(0deg);
+    }
+    50% {
+        transform: translateY(-8px) rotate(1deg);
+    }
+    100% {
+        transform: translateY(0px) rotate(0deg);
+    }
+}
+
+.animated-tractor {
+    display: block;
+    margin: 20px auto 15px auto;
+    width: 200px;
+    height: auto;
+    animation: floatTractor 3.5s ease-in-out infinite;
+    filter: drop-shadow(0px 8px 6px rgba(0, 0, 0, 0.5));
+}
+
+#game-wrapper {
+    position: relative;
+    width: 100vw;
+    height: 100vh;
+    display: none;
+}
+
+canvas { display: block; }
+
+/* HUD Superior */
+#fs-hud-top {
+    position: absolute;
+    top: 20px;
+    left: 20px;
+    right: 20px;
+    display: flex;
+    justify-content: space-between;
+    pointer-events: none;
+    z-index: 5;
+}
+
+.hud-block {
+    background: var(--fs-ui-bg);
+    padding: 10px 15px;
+    border-radius: 6px;
+    border-bottom: 3px solid var(--fs-blue);
+    display: flex;
+    gap: 15px;
+    pointer-events: auto;
+}
+
+.hud-item { text-align: left; }
+.hud-label { font-size: 9px; color: #aaa; text-transform: uppercase; font-weight: bold; }
+.hud-value { font-size: 15px; font-weight: bold; color: #fff; }
+
+.active-vehicle-color {
+    color: #00e676;
+}
+
+#mission-panel {
+    background: rgba(12, 20, 32, 0.95);
+    border-top: 3px solid var(--neon-amber);
+    padding: 10px 20px;
+    border-radius: 6px;
+    text-align: center;
+}
+
+.mission-label-color {
+    color: #ffb300;
+}
+
+.mission-text-style {
+    color: #fff;
+    font-size: 14px;
+}
+
+.cargo-txt-color {
+    color: #4fc3f7;
+}
+
+.money-txt-color {
+    color: #ffd54f;
+}
+
+/* ALERTA DE SUBMERSÃO */
+#lake-warning {
+    position: absolute;
+    top: 120px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(211, 47, 47, 0.95);
+    color: white;
+    padding: 15px 40px;
+    border-radius: 8px;
+    font-weight: bold;
+    font-size: 22px;
+    text-align: center;
+    border: 2px solid #ff1744;
+    box-shadow: 0 0 30px rgba(255, 23, 68, 0.6);
+    display: none;
+    z-index: 20;
+    animation: pulse 1s infinite alternate;
+}
+
+@keyframes pulse {
+    from { transform: translateX(-50%) scale(1); }
+    to { transform: translateX(-50%) scale(1.05); }
+}
+
+#sales-toast {
+    position: absolute;
+    bottom: 30px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(0, 230, 118, 0.95);
+    color: #000;
+    padding: 12px 25px;
+    border-radius: 30px;
+    font-weight: bold;
+    font-size: 15px;
+    display: none;
+    z-index: 10;
 }
