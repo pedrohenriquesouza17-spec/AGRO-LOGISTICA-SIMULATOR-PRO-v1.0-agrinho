@@ -7,6 +7,6 @@ Na parte técnica, o jogo foi desenvolvido do zero utilizando apenas JavaScript 
 Ferramentas utilizadas: 
 Editor de códigos VsCode https://vscode.dev/?vscode-lang=pt-br
 
-Auxilio do Gemini para criação dos códigos https://gemini.google.com/app?hl=pt-BR
+Auxilio do Gemini para criação dos códigos e imagens https://gemini.google.com/app?hl=pt-BR
 
 ElevenLabs para criação de aúdios - https://elevenlabs.io/pt
